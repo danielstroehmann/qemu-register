@@ -1,7 +1,7 @@
 # Fetch base image
 FROM debian:stretch as qemu
 
-ENV QEMU_VERSION 4.2.0
+ENV QEMU_VERSION 5.2.0
 # Install build dependencies
 RUN apt-get update -qq && apt-get install -yqq \
     build-essential \
@@ -12,9 +12,28 @@ RUN apt-get update -qq && apt-get install -yqq \
     libglib2.0-dev \
     libpixman-1-dev \
     pkg-config \
-    python \
     --no-install-recommends
+    
+# dependencies for wget over HTTPS
+RUN apt-get -y install libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev
 
+# install python 3.6 and ninja
+ARG BUILDDIR="/tmp/build"
+ARG PYTHON_VER="3.6.8"
+WORKDIR ${BUILDDIR}
+RUN apt-get update -qq && \
+apt-get upgrade -y  > /dev/null 2>&1 && \
+apt-get install wget gcc make zlib1g-dev -y -qq > /dev/null 2>&1 && \
+wget --quiet https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tgz > /dev/null 2>&1 && \
+tar zxf Python-${PYTHON_VER}.tgz && \
+cd Python-${PYTHON_VER} && \
+./configure  > /dev/null 2>&1 && \
+make > /dev/null 2>&1 && \
+make install > /dev/null 2>&1 && \
+rm -rf ${BUILDDIR}
+RUN pip3 install ninja
+
+# download and build qemu
 RUN curl "https://download.qemu.org/qemu-${QEMU_VERSION}.tar.xz" -o "qemu-${QEMU_VERSION}.tar.xz"
 RUN mkdir qemu && tar xf "qemu-${QEMU_VERSION}.tar.xz" --strip-components=1 -C qemu
 WORKDIR qemu
